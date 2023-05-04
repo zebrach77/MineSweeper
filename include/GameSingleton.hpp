@@ -1,31 +1,35 @@
+#ifndef GAME_SINGLETON_HPP
+#define GAME_SINGLETON_HPP
 #include "MineSweeperMap.hpp"
 
 enum GameState {
-  in_process = 0,
-  win = 1,
-  lose = 2
+	in_process = 0,
+	win = 1,
+	lose = 2
 };
 
 
 enum EventTypes {
-  OpenCell,
-  SetFlag,
-  UnsetFlag
+	OpenCell,
+	SetFlag,
+	UnsetFlag,
+	WinEvent,
+	LoseEvent
 };
 
 struct Event {
-    Event(EventTypes type, std::string text) 
-      : type(type), text(text) {
+	Event(EventTypes type, std::string text)
+			: type(type), text(text) {
 
-    }
+	}
 
-    EventTypes type;
-    std::string text;
+	EventTypes type;
+	std::string text;
 };
 
 class GameEventFollower {
 public:
-  virtual void EventPerformed(Event event) = 0;
+	virtual void EventPerformed(Event event) = 0;
 };
 
 /**
@@ -33,39 +37,59 @@ public:
  */
 class GameSingleton {
 public:
-  GameSingleton(const GameSingleton&) = delete;
-  GameSingleton(GameSingleton&&) = delete;
-  GameSingleton& operator=(const GameSingleton&) = delete;
-  GameSingleton& operator=(GameSingleton&&) = delete;
+	GameSingleton(const GameSingleton &) = delete;
 
-  void LeftClickCell(size_t i, size_t j);
+	GameSingleton(GameSingleton &&) = delete;
 
-  void RightClickCell(size_t i, size_t j);
+	GameSingleton &operator=(const GameSingleton &) = delete;
 
-  bool IsOpened(size_t i, size_t j);
+	GameSingleton &operator=(GameSingleton &&) = delete;
 
-  void SetOpened(size_t i, size_t j);
+	void LeftClickCell(size_t i, size_t j);
 
-  std::string GetContent(size_t i, size_t j);
+	void RightClickCell(size_t i, size_t j);
+	bool IsOpened(size_t i, size_t j);
 
-  void WaveBFS(size_t i, size_t j);
+	void SetOpened(size_t i, size_t j);
 
-  static GameSingleton& GetGame();
+	std::string GetContent(size_t i, size_t j);
 
-  std::vector<std::vector<bool>>& OpenedLink();
+	void WaveBFS(size_t i, size_t j);
 
-  int GetStatus();
+	static GameSingleton &GetGame();
 
-  void Follow(size_t i, size_t j, GameEventFollower* follower) {
-    followers_[i][j] = follower;
-  }
+	std::vector<std::vector<bool>> &OpenedLink();
+
+	int GetStatus();
+
+	void Follow(size_t i, size_t j, GameEventFollower *follower) {
+		followers_[i][j] = follower;
+	}
+
+	void FollowGameStatus(GameEventFollower *follower) {
+		follower_state_.push_back(follower);
+	}
+
+
+	void PushGameStatus(Event event) {
+		for (auto* follower: follower_state_) {
+			follower->EventPerformed(event);
+		}
+	}
+
+
+	bool CheckWin();
+
 private:
-  GameSingleton(size_t rows, size_t columns, size_t mines);
+	GameSingleton(size_t rows, size_t columns, size_t mines);
+	std::vector<GameEventFollower*> follower_state_;
+	static GameSingleton *game_;
 
-  static GameSingleton* game_;
-
-  std::vector<std::vector<bool>> is_opened;
-  std::vector<std::vector<GameEventFollower*>> followers_;
-  int status_{in_process};
-  MineSweeperMap map_;
+	std::vector<std::vector<bool>> is_opened;
+	std::vector<std::vector<GameEventFollower *>> followers_;
+	int status_{in_process};
+	MineSweeperMap map_;
+	std::vector<std::vector<bool>> is_flag;
 };
+
+#endif
